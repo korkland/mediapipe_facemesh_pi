@@ -1,0 +1,13 @@
+{
+  "model_file": "models/face_detection_short_range.tflite",
+  "min_score_thresh": 0.5,
+  "min_suppression_threshold": 0.3,
+  "ssd_anchors_params": {
+    "min_scale": 0.1484375,
+    "max_scale": 0.75,
+    "input_size": 128,
+    "anchor_offset_x": 0.5,
+    "anchor_offset_y": 0.5,
+    "strides": [ 8, 16, 16, 16 ]
+  }
+}

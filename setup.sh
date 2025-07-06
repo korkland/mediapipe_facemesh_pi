@@ -2,6 +2,10 @@
 # setup.sh - Setup script for Raspberry Pi to build TensorFlow Lite and dependencies
 set -e
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 # Update package list
 echo "Updating package list..."
 sudo apt update
@@ -13,7 +17,7 @@ sudo apt install -y libopencv-dev
 sudo apt install -y libjpeg-dev libpng-dev libtiff-dev
 
 # Clone TensorFlow repo if not already present
-cd ~
+cd third_party
 if [ ! -d "tensorflow" ]; then
     echo "Cloning TensorFlow repository..."
     git clone https://github.com/tensorflow/tensorflow.git

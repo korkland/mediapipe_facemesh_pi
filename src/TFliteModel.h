@@ -14,9 +14,9 @@ public:
     virtual ~TFliteModel();
 
     bool isLoaded() const { return m_is_loaded; }
-    virtual bool invoke(const cv::Mat& input, cv::Mat& output) = 0;
 
 protected:
+    bool invoke(const cv::Mat& input, cv::Mat& output);
     std::unique_ptr<tflite::FlatBufferModel> m_model;
     std::unique_ptr<tflite::Interpreter> m_interpreter;
 

@@ -7,8 +7,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # Set these paths to match your system. These are the hints our find module needs.
-set(TFLITE_BUILD_DIR "~/tensorflow/tflite_build")
-set(TENSORFLOW_ROOT "~/tensorflow")
+set(TFLITE_BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/tensorflow/tflite_build)
+set(TENSORFLOW_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/third_party/tensorflow)
 
 # Now, find the package using our module.
 # CMake will look in CMAKE_MODULE_PATH and find "FindTFLite.cmake".
@@ -16,10 +16,15 @@ find_package(TFLite REQUIRED)
 find_package(OpenCV REQUIRED)
 
 # --- Application ---
-add_executable(test_tflite test_tflite.cpp)
+add_executable(mediapipe_facemesh_pi src/main.cpp)
 
-target_link_libraries(test_tflite
+# Include Json header
+target_include_directories(mediapipe_facemesh_pi
+                            PRIVATE
+                            ${OpenCV_INCLUDE_DIRS}
+                            third_party/json/include)
+
+target_link_libraries(mediapipe_facemesh_pi
                         PRIVATE
                         TFLite::tflite
-                        OpenCV::OpenCV
-                        )
+                        ${OpenCV_LIBS})

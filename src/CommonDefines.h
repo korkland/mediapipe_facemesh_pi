@@ -19,4 +19,16 @@ enum FaceDetectionIdx
     FACE_DETECTION_COUNT
 };
 
+struct DetectionBox{
+    float x; // X coordinate of the top-left corner
+    float y; // Y coordinate of the top-left corner
+    float width; // Width of the box
+    float height; // Height of the box
+    float rotation; // Rotation angle in degrees (optional, can be 0.0f if not used)
+
+    DetectionBox(float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = 0.0f,
+                 float rotation = 0.0f)
+        : x(x), y(y), width(width), height(height), rotation(rotation) {}
+}
+
 } // namespace pi
