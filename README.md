@@ -1,6 +1,7 @@
-# Mediapipe FaceMesh C++ (Raspberry Pi 4)
+# Mediapipe FaceMesh C++ (Raspberry Pi)
 
-Full implementation of MediaPipe FaceMesh in C++ using TensorFlow Lite (TFLite) and OpenCV, optimized for Raspberry Pi 4.
+Fun project to demonstrate Mediapipe Facemesh flow in C++.
+Full implementation of MediaPipe FaceMesh in C++ using TensorFlow Lite (TFLite) and OpenCV, optimized for Raspberry Pi.
 
 ## Features
 - Real-time face mesh detection using TFLite
