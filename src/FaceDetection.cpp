@@ -74,7 +74,7 @@ void FaceDetection::preprocessInput(const cv::Mat& input) {
     cv::warpPerspective(input, m_resized_input, m_model_input_perspective_transform, m_model_input.size());
 
     // Convert the image to float and normalize
-    constexpr double scale_range_minus_one = 2.F / 255.F;
+    constexpr double scale_range_minus_one = 2.0f / 255.0f; // Scale factor to convert [0, 255] to [-1, 1]
     m_resized_input.convertTo(m_model_input, CV_32FC3, scale_range_minus_one, -1.0f);
 }
 
@@ -140,6 +140,99 @@ int FaceDetection::tensorsToDetections(float* boxes, float* scores) const {
         num_boxes_passed++;
     }
     return num_boxes_passed;
+}
+
+void FaceDetection::weightedNonMaxSuppression(float* boxes, float* scores, int num_boxes) {
+    // Sort the scores and keep track of the indices
+    std::iota(m_sorted_scores_indices.begin(), m_sorted_scores_indices.begin() + num_boxes, 0);
+    std::sort(m_sorted_scores_indices.begin(), m_sorted_scores_indices.begin() + num_boxes,
+              [&scores](int a, int b) { return scores[a] > scores[b]; });
+
+    // Non-max suppression algorithm - Note we are looking for the best candidate
+    int candidates = 1;
+    for (int i = 1; i < num_boxes; i++){
+        if (overlap_similarity(&boxes[m_sorted_scores_indices[0] * FaceDetectionIdx::FACE_DETECTION_COUNT],
+                                &boxes[m_sorted_scores_indices[i] * FaceDetectionIdx::FACE_DETECTION_COUNT])
+                                > m_config.min_suppression_threshold) {
+            m_sorted_scores_indices[candidates] = m_sorted_scores_indices[i];
+            candidates++;
+        }
+    }
+
+    float total_score = 0.0f;
+    std::array<float, FaceDetectionIdx::L_EYE_Y + 1> weighted_face{};
+    for (int i = 0; i < candidates; i++) {
+        const auto sorted_idx = m_sortedScoreIdxs[i];
+        const auto candidate_score = scores[sorted_idx];
+        const auto candidate_box = &boxes[sorted_idx * FaceDetectionIdx::MP_FACE_DET_SIZE];
+        total_score += candidate_score;
+        weighted_face[FaceDetectionIdx::X] += candidate_box[FaceDetectionIdx::X] * candidate_score;
+        weighted_face[FaceDetectionIdx::Y] += candidate_box[FaceDetectionIdx::Y] * candidate_score;
+        weighted_face[FaceDetectionIdx::WIDTH] += (candidate_box[FaceDetectionIdx::X] + candidate_box[FaceDetectionIdx::WIDTH]) * candidate_score;
+        weighted_face[FaceDetectionIdx::HEIGHT] += (candidate_box[FaceDetectionIdx::Y] + candidate_box[FaceDetectionIdx::HEIGHT]) * candidate_score;
+        weighted_face[FaceDetectionIdx::R_EYE_X] += candidate_box[FaceDetectionIdx::R_EYE_X] * candidate_score;
+        weighted_face[FaceDetectionIdx::R_EYE_Y] += candidate_box[FaceDetectionIdx::R_EYE_Y] * candidate_score;
+        weighted_face[FaceDetectionIdx::L_EYE_X] += candidate_box[FaceDetectionIdx::L_EYE_X] * candidate_score;
+        weighted_face[FaceDetectionIdx::L_EYE_Y] += candidate_box[FaceDetectionIdx::L_EYE_Y] * candidate_score;
+    }
+
+    const auto scaled_score = 1.F / total_score;
+    boxes[FaceDetectionIdx::X] = weighted_face[FaceDetectionIdx::X] * scaled_score;
+    boxes[FaceDetectionIdx::Y] = weighted_face[FaceDetectionIdx::Y] * scaled_score;
+    boxes[FaceDetectionIdx::WIDTH] = weighted_face[FaceDetectionIdx::WIDTH] * scaled_score - boxes[FaceDetectionIdx::X];
+    boxes[FaceDetectionIdx::HEIGHT] = weighted_face[FaceDetectionIdx::HEIGHT] * scaled_score - boxes[FaceDetectionIdx::Y];
+    boxes[FaceDetectionIdx::R_EYE_X] = weighted_face[FaceDetectionIdx::R_EYE_X] * scaled_score;
+    boxes[FaceDetectionIdx::R_EYE_Y] = weighted_face[FaceDetectionIdx::R_EYE_Y] * scaled_score;
+    boxes[FaceDetectionIdx::L_EYE_X] = weighted_face[FaceDetectionIdx::L_EYE_X] * scaled_score;
+    boxes[FaceDetectionIdx::L_EYE_Y] = weighted_face[FaceDetectionIdx::L_EYE_Y] * scaled_score;
+}
+
+void FaceDetection::detectionProjection(float* boxes, DetectionBox& detectionBoxOut) const {
+    // Project the detection box to the original image coordinates
+    constexpr float box_scale_size = 1.5f; // Scale factor for the box size
+
+    auto frame_width = static_cast<float>(m_config.frame_width);
+    auto frame_height = static_cast<float>(m_config.frame_height);
+
+    // Project Keypoints - we need the keypoints to calculate the box rotation
+    const auto right_eye_coords = projectPoint({ boxes[FaceDetectionIdx::REYEX], boxes[FaceDetectionIdx::REYEY] }, m_projection_matrix);
+    boxes[FaceDetectionIdx::R_EYE_X] = right_eye_coords.x * frame_width;
+    boxes[FaceDetectionIdx::R_EYE_Y] = right_eye_coords.y * frame_height;
+    const auto left_eye_coords = projectPoint({ boxes[FaceDetectionIdx::LEYEX], boxes[FaceDetectionIdx::LEYEY] }, m_projection_matrix);
+    boxes[FaceDetectionIdx::LEYEX] = left_eye_coords.x * frame_width;
+    boxes[FaceDetectionIdx::LEYEY] = left_eye_coords.y * frame_height;
+
+    // Project bounding box.
+    const auto xmin = boxes[FaceDetectionIdx::X];
+    const auto ymin = boxes[FaceDetectionIdx::Y];
+    const auto xmax = boxes[FaceDetectionIdx::X] + boxes[FaceDetectionIdx::WIDTH];
+    const auto ymax = boxes[FaceDetectionIdx::Y] + boxes[FaceDetectionIdx::HEIGHT];
+    const std::array<Point2D, 4> box_coords{
+        projectPoint({ xmin, ymin }, m_projection_matrix),
+        projectPoint({ xmax, ymin }, m_projection_matrix),
+        projectPoint({ xmin, ymax }, m_projection_matrix),
+        projectPoint({ xmax, ymax }, m_projection_matrix) };
+
+    auto left_top = box_coords[0];
+    auto right_bottom = box_coords[0];
+    for (int i = 1; i < 4; i++)
+    {
+        left_top.x = std::min(left_top.x, box_coords[i].x);
+        left_top.y = std::min(left_top.y, box_coords[i].y);
+        right_bottom.x = std::max(right_bottom.x, box_coords[i].x);
+        right_bottom.y = std::max(right_bottom.y, box_coords[i].y);
+    }
+
+    const auto width = (right_bottom.x - left_top.x) * frame_width;
+    const auto height = (right_bottom.y - left_top.y) * frame_height;
+    const auto longest_dim = std::max(width, height) * box_scale_size;
+
+    detectionBoxOut.center.x = left_top.x * frame_width + width * 0.5f;
+    detectionBoxOut.center.y = left_top.y * frame_height + height * 0.5f;
+    detectionBoxOut.width = longest_dim;
+    detectionBoxOut.height = longest_dim;
+    detectionBoxOut.rotation = calc_rotation(boxes[FaceDetectionIdx::R_EYE_X], boxes[FaceDetectionIdx::R_EYE_Y],
+                                            boxes[FaceDetectionIdx::L_EYE_X], boxes[FaceDetectionIdx::L_EYE_Y]);
 }
 
 } // namespace pi

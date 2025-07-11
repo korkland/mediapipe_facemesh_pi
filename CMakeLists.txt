@@ -2,16 +2,17 @@ cmake_minimum_required(VERSION 3.10)
 project(mediapipe_facemesh_pi)
 set(CMAKE_CXX_STANDARD 17)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # --- TFLite Configuration ---
 # Tell CMake where to find our custom FindTFLite.cmake module
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-# Set these paths to match your system. These are the hints our find module needs.
+# Define the TFLite build directory and TensorFlow root directory
 set(TFLITE_BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/tensorflow/tflite_build)
 set(TENSORFLOW_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/third_party/tensorflow)
 
-# Now, find the package using our module.
-# CMake will look in CMAKE_MODULE_PATH and find "FindTFLite.cmake".
+# Add the TFLite build directory to the CMake module path
 find_package(TFLite REQUIRED)
 find_package(OpenCV REQUIRED)
 
