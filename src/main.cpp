@@ -1,4 +1,5 @@
 #include <opencv2/opencv.hpp>
+#include "FaceDetection.h"
 
 int main(int argc, char** argv) {
     // Check if the input image path is provided

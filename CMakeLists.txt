@@ -15,6 +15,9 @@ set(TENSORFLOW_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/third_party/tensorflow)
 find_package(TFLite REQUIRED)
 find_package(OpenCV REQUIRED)
 
+# Define resource directories
+set(MODELS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/models)
+
 # --- Application ---
 add_executable(mediapipe_facemesh_pi src/main.cpp)
 
@@ -28,3 +31,10 @@ target_link_libraries(mediapipe_facemesh_pi
                         PRIVATE
                         TFLite::tflite
                         ${OpenCV_LIBS})
+
+target_compile_definitions(mediapipe_facemesh_pi
+                        PRIVATE
+                        MODELS_DIR="${MODELS_DIR}"
+)
+
+file(COPY ${MODELS_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

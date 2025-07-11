@@ -13,17 +13,40 @@ public:
     explicit TFliteModel(const std::string& model_path);
     virtual ~TFliteModel();
 
-    bool isLoaded() const { return m_is_loaded; }
+    inline int GetInputTensorCount() const { return m_interpreter->inputs().size(); }
+    inline int GetOutputTensorCount() const { return m_interpreter->outputs().size(); }
+
+    // Get input tensor dimensions
+    inline const TfLiteIntArray* GetInputTensorShape(int tensorIdx) const {
+        int input_tensor_idx = m_interpreter->inputs()[tensorIdx];
+        return m_interpreter->tensor(input_tensor_idx)->dims;
+    }
+
+    // Get output tensor dimensions
+    inline const TfLiteIntArray* GetOutputTensorShape(int tensorIdx) const {
+        int output_tensor_idx = m_interpreter->outputs()[tensorIdx];
+        return m_interpreter->tensor(output_tensor_idx)->dims;
+    }
+
+    // Get input tensor data
+    inline float* GetInputTensorData(int tensorIdx) {
+        int input_tensor_idx = m_interpreter->inputs()[tensorIdx];
+        return m_interpreter->typed_tensor<float>(input_tensor_idx);
+    }
+
+    // Get output tensor data
+    inline float* GetOutputTensorData(int tensorIdx) {
+        int output_tensor_idx = m_interpreter->outputs()[tensorIdx];
+        return m_interpreter->typed_tensor<float>(output_tensor_idx);
+    }
 
 protected:
-    bool invoke(const cv::Mat& input, cv::Mat& output);
     std::unique_ptr<tflite::FlatBufferModel> m_model;
     std::unique_ptr<tflite::Interpreter> m_interpreter;
 
 private:
     // XNNPack delegate for optimized inference on ARM devices
-    TfLiteXNNPackDelegate* m_xnnpack_delegate = nullptr;
-    bool m_is_loaded = false;
+    TfLiteDelegate* m_xnnpack_delegate = nullptr;
 };
 
 } // namespace pi
