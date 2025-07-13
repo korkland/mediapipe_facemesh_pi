@@ -72,26 +72,42 @@ void drawRotatedBox(cv::Mat& image, const pi::DetectionBox& box, const cv::Scala
 
 int main(int argc, char** argv) {
 
-    // Open default camera (index 0)
-    cv::VideoCapture cap(0);
+    // Force V4L2 backend instead of GStreamer
+    cv::VideoCapture cap(0, cv::CAP_V4L2);
     if (!cap.isOpened()) {
-        std::cerr << "Error: Could not open camera." << std::endl;
+        std::cerr << "Error: Could not open camera with V4L2 backend." << std::endl;
         return -1;
     }
 
-    // Set camera properties (optional)
-    cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
-    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
-    cap.set(cv::CAP_PROP_FPS, 30);
-    cap.set(cv::CAP_PROP_BUFFERSIZE, 1);  // Reduce buffer latency
-    cap.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G')); // Hardware MJPEG
+    std::cout << "Using backend: " << cap.getBackendName() << std::endl;
 
-    // Get actual frame dimensions
+    // Check what the camera supports BEFORE setting properties
+    std::cout << "=== Camera Capabilities ===" << std::endl;
+    std::cout << "Default resolution: " << cap.get(cv::CAP_PROP_FRAME_WIDTH) << "x" << cap.get(cv::CAP_PROP_FRAME_HEIGHT) << std::endl;
+    std::cout << "Default FPS: " << cap.get(cv::CAP_PROP_FPS) << std::endl;
+
+    // Setting properties in the correct order
+    bool width_set = cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+    bool height_set = cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+    bool fps_set = cap.set(cv::CAP_PROP_FPS, 30);
+    bool buffer_set = cap.set(cv::CAP_PROP_BUFFERSIZE, 1);
+    bool fourcc_set = cap.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('Y', 'U', 'Y', 'V'));
+
+    std::cout << "=== Property Setting Results ===" << std::endl;
+    std::cout << "Width set: " << (width_set ? "SUCCESS" : "FAILED") << std::endl;
+    std::cout << "Height set: " << (height_set ? "SUCCESS" : "FAILED") << std::endl;
+    std::cout << "FPS set: " << (fps_set ? "SUCCESS" : "FAILED") << std::endl;
+    std::cout << "Buffer set: " << (buffer_set ? "SUCCESS" : "FAILED") << std::endl;
+    std::cout << "FOURCC set: " << (fourcc_set ? "SUCCESS" : "FAILED") << std::endl;
+
+    // Get actual frame dimensions after setting
     int frame_width = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_WIDTH));
     int frame_height = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_HEIGHT));
     double fps = cap.get(cv::CAP_PROP_FPS);
 
-    std::cout << "Camera properties: " << frame_width << "x" << frame_height << ", FPS: " << fps << std::endl;
+    std::cout << "=== Final Camera Properties ===" << std::endl;
+    std::cout << "Actual resolution: " << frame_width << "x" << frame_height << std::endl;
+    std::cout << "Actual FPS: " << fps << std::endl;
 
     // Create a FaceDetectionConfig configuration
     pi::FaceDetectionConfig config;

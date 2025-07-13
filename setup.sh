@@ -38,4 +38,19 @@ cd tflite_build
 cmake ../tensorflow/lite -DCMAKE_BUILD_TYPE=Release -DTFLITE_ENABLE_XNNPACK=ON
 make -j$(nproc)
 
+# Camera setup
+echo "Setting up camera..."
+# Check if v4l2-ctl is installed
+if ! command -v v4l2-ctl &> /dev/null; then
+    echo "v4l2-ctl not found, installing v4l-utils..."
+    sudo apt install -y v4l-utils
+fi
+# List available camera formats
+echo "Available camera formats:"
+v4l2-ctl --list-formats-ext
+# Try YUYV format (uncompressed)
+echo "Trying YUYV format (uncompressed)..."
+v4l2-ctl --set-fmt-video=width=640,height=480,pixelformat=YUYV
+v4l2-ctl --set-parm=30
+
 echo "Setup complete! TensorFlow Lite built successfully."
