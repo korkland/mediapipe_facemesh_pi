@@ -1,9 +1,10 @@
 #include "FaceDetection.h"
+#include <numeric>
 
 namespace pi {
 
 FaceDetection::FaceDetection(const FaceDetectionConfig& config)
-    : TFliteModel(config.model_path), m_config(config) {
+    : TfLiteModel(config.model_path), m_config(config) {
 
     // Initialize the FaceDetection with the provided configuration
     ASSERT(m_config.frame_width > 0 && m_config.frame_height > 0,
@@ -14,12 +15,12 @@ FaceDetection::FaceDetection(const FaceDetectionConfig& config)
 
     // Verify the model input and output details
     ASSERT(GetInputTensorCount() == 1, "Expected exactly one input tensor for FaceDetection model.");
-    ASSERT(GetInputTensorShape(0).size() == 4,
+    ASSERT(GetInputTensorShape(0)->size == 4,
            "Expected input tensor shape to be [1, height, width, channels]."); // TODO
     ASSERT(GetOutputTensorCount() == 2, "Expected exactly two output tensors for FaceDetection model.");
 
     // Set the input tensor dimensions based on the configuration
-    auto input_rect_size = GetInputTensorShape(0)[1];
+    auto input_rect_size = GetInputTensorShape(0)->data[1];
     auto input_rect_size_float = static_cast<float>(input_rect_size);
     m_tensor_scale = 1.0f / input_rect_size_float;
     m_model_input = cv::Mat(input_rect_size, input_rect_size, CV_32FC3, GetInputTensorData(0));
@@ -51,7 +52,7 @@ FaceDetection::FaceDetection(const FaceDetectionConfig& config)
     std::copy(projection_matrix.begin(), projection_matrix.end(), m_projection_matrix.begin());
 
     // Initialize SSD anchors
-    ASSERT(m_config.ssd_anchors.size() == GetOutputTensorShape(1)[1],
+    ASSERT(m_config.ssd_anchors.size() == GetOutputTensorShape(1)->data[1],
            "SSD anchors size does not match the output tensor size.");
     m_sorted_scores_indices.resize(m_config.ssd_anchors.size());
 }
@@ -162,9 +163,9 @@ void FaceDetection::weightedNonMaxSuppression(float* boxes, float* scores, int n
     float total_score = 0.0f;
     std::array<float, FaceDetectionIdx::L_EYE_Y + 1> weighted_face{};
     for (int i = 0; i < candidates; i++) {
-        const auto sorted_idx = m_sortedScoreIdxs[i];
+        const auto sorted_idx = m_sorted_scores_indices[i];
         const auto candidate_score = scores[sorted_idx];
-        const auto candidate_box = &boxes[sorted_idx * FaceDetectionIdx::MP_FACE_DET_SIZE];
+        const auto candidate_box = &boxes[sorted_idx * FaceDetectionIdx::FACE_DETECTION_COUNT];
         total_score += candidate_score;
         weighted_face[FaceDetectionIdx::X] += candidate_box[FaceDetectionIdx::X] * candidate_score;
         weighted_face[FaceDetectionIdx::Y] += candidate_box[FaceDetectionIdx::Y] * candidate_score;
@@ -195,12 +196,12 @@ void FaceDetection::detectionProjection(float* boxes, DetectionBox& detectionBox
     auto frame_height = static_cast<float>(m_config.frame_height);
 
     // Project Keypoints - we need the keypoints to calculate the box rotation
-    const auto right_eye_coords = projectPoint({ boxes[FaceDetectionIdx::REYEX], boxes[FaceDetectionIdx::REYEY] }, m_projection_matrix);
+    const auto right_eye_coords = projectPoint({ boxes[FaceDetectionIdx::R_EYE_X], boxes[FaceDetectionIdx::R_EYE_Y] }, m_projection_matrix);
     boxes[FaceDetectionIdx::R_EYE_X] = right_eye_coords.x * frame_width;
     boxes[FaceDetectionIdx::R_EYE_Y] = right_eye_coords.y * frame_height;
-    const auto left_eye_coords = projectPoint({ boxes[FaceDetectionIdx::LEYEX], boxes[FaceDetectionIdx::LEYEY] }, m_projection_matrix);
-    boxes[FaceDetectionIdx::LEYEX] = left_eye_coords.x * frame_width;
-    boxes[FaceDetectionIdx::LEYEY] = left_eye_coords.y * frame_height;
+    const auto left_eye_coords = projectPoint({ boxes[FaceDetectionIdx::L_EYE_X], boxes[FaceDetectionIdx::L_EYE_Y] }, m_projection_matrix);
+    boxes[FaceDetectionIdx::L_EYE_X] = left_eye_coords.x * frame_width;
+    boxes[FaceDetectionIdx::L_EYE_Y] = left_eye_coords.y * frame_height;
 
     // Project bounding box.
     const auto xmin = boxes[FaceDetectionIdx::X];

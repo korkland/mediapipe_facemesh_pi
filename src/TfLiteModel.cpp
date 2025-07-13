@@ -1,8 +1,10 @@
-#include "TFliteModel.h"
+#include "TfLiteModel.h"
+#include "CommonDefines.h"
+#include "tensorflow/lite/kernels/register.h"
 
 namespace pi {
 
-TFLiteModel::TFliteModel(const std::string& model_path) {
+TfLiteModel::TfLiteModel(const std::string& model_path) {
 
     // Load the TFLite model from the specified path
     m_model = tflite::FlatBufferModel::BuildFromFile(model_path.c_str());
@@ -30,7 +32,7 @@ TFLiteModel::TFliteModel(const std::string& model_path) {
     std::cout << "TFLite model loaded successfully from " << model_path << std::endl;
 }
 
-TFLiteModel::~TFLiteModel() {
+TfLiteModel::~TfLiteModel() {
     // Clean up the XNNPack delegate
     if (m_xnnpack_delegate) {
         TfLiteXNNPackDelegateDelete(m_xnnpack_delegate);

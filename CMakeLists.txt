@@ -20,13 +20,18 @@ find_package(OpenCV REQUIRED)
 set(MODELS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/models)
 
 # --- Application ---
-add_executable(mediapipe_facemesh_pi src/main.cpp)
+add_executable(mediapipe_facemesh_pi
+                src/main.cpp
+                src/TfLiteModel.cpp
+                src/FaceDetection.cpp
+                )
 
 # Include Json header
 target_include_directories(mediapipe_facemesh_pi
                             PRIVATE
                             ${OpenCV_INCLUDE_DIRS}
-                            third_party/json/include)
+                            third_party/json
+                            src)
 
 target_link_libraries(mediapipe_facemesh_pi
                         PRIVATE

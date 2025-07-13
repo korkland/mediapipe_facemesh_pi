@@ -41,6 +41,7 @@ struct DetectionBox{
     float height;   // Height of the box
     float rotation; // Rotation angle in degrees (optional, can be 0.0f if not used)
 
+    DetectionBox() : center({0.0f, 0.0f}), width(0.0f), height(0.0f), rotation(0.0f) {}
     DetectionBox(Point2D center, float width = 0.0f, float height = 0.0f,
                  float rotation = 0.0f)
         : center(center), width(width), height(height), rotation(rotation) {}

@@ -8,10 +8,10 @@
 
 namespace pi {
 
-class TFliteModel {
+class TfLiteModel {
 public:
-    explicit TFliteModel(const std::string& model_path);
-    virtual ~TFliteModel();
+    explicit TfLiteModel(const std::string& model_path);
+    virtual ~TfLiteModel();
 
     inline int GetInputTensorCount() const { return m_interpreter->inputs().size(); }
     inline int GetOutputTensorCount() const { return m_interpreter->outputs().size(); }

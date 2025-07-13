@@ -1,6 +1,6 @@
 #pragma once
 
-#include "TFliteModel.h"
+#include "TfLiteModel.h"
 #include "CommonDefines.h"
 
 namespace pi {
@@ -14,7 +14,7 @@ struct FaceDetectionConfig {
     std::vector<Point2D> ssd_anchors; // SSD anchors parameters
 };
 
-class FaceDetection : public TFliteModel {
+class FaceDetection : public TfLiteModel {
 public:
     explicit FaceDetection(const FaceDetectionConfig& config);
     virtual ~FaceDetection() = default;
