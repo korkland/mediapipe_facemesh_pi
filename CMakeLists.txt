@@ -51,6 +51,7 @@ add_executable(mediapipe_facemesh_pi
                 src/TfLiteModel.cpp
                 src/FaceDetection.cpp
                 src/ConfigManager.cpp
+                src/FaceLandmarks.cpp
                 )
 
 # Include Json header

@@ -19,15 +19,15 @@ FaceDetection::FaceDetection(const FaceDetectionConfig& config)
     // Verify the model input and output details
     ASSERT(GetInputTensorCount() == 1, "Expected exactly one input tensor for FaceDetection model.");
     ASSERT(GetInputTensorShape(0)->size == 4,
-           "Expected input tensor shape to be [1, height, width, channels]."); // TODO
+           "Expected input tensor shape to be [1, height, width, channels].");
     ASSERT(GetOutputTensorCount() == 2, "Expected exactly two output tensors for FaceDetection model.");
 
-    // Set the input tensor dimensions based on the configuration
+    // Allocate buffers based on model input dimensions
     auto input_rect_size = GetInputTensorShape(0)->data[1];
     auto input_rect_size_float = static_cast<float>(input_rect_size);
     m_tensor_scale = 1.0f / input_rect_size_float;
     m_model_input = cv::Mat(input_rect_size, input_rect_size, CV_32FC3, GetInputTensorData(0));
-    // m_model_input = -1.0f; // TODO check if needed
+    m_model_input = -1.0f;
     m_resized_input = cv::Mat(input_rect_size, input_rect_size, CV_8UC3);
 
     // Set transform parameters for the model input
@@ -116,9 +116,9 @@ bool FaceDetection::run(const cv::Mat& imageIn, DetectionBox& detectionBoxOut) {
     return postprocessOutput(detectionBoxOut);
 }
 
-void FaceDetection::preprocessInput(const cv::Mat& input) {
+void FaceDetection::preprocessInput(const cv::Mat& imageIn) {
     // Apply perspective transform
-    cv::warpPerspective(input, m_resized_input, m_model_input_perspective_transform, m_model_input.size());
+    cv::warpPerspective(imageIn, m_resized_input, m_model_input_perspective_transform, m_model_input.size());
 
     // Convert the image to float and normalize
     constexpr double scale_range_minus_one = 2.0f / 255.0f; // Scale factor to convert [0, 255] to [-1, 1]

@@ -7,6 +7,8 @@
 
 namespace pi {
 
+constexpr double RAD2DEG = 180.0 / M_PI; // Constant to convert radians to degrees
+
 enum FaceDetectionIdx
 {
     X = 0,
@@ -33,6 +35,14 @@ struct Point2D {
     float y; // Y coordinate
 
     Point2D(float x = 0.0f, float y = 0.0f) : x(x), y(y) {}
+};
+
+struct Point3D {
+    float x; // X coordinate
+    float y; // Y coordinate
+    float z; // Z coordinate
+
+    Point3D(float x = 0.0f, float y = 0.0f, float z = 0.0f) : x(x), y(y), z(z) {}
 };
 
 struct DetectionBox{

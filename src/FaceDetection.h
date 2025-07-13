@@ -15,7 +15,7 @@ public:
 private:
 
     void buildAnchors(const AnchorConfig& config);
-    void preprocessInput(const cv::Mat& input);
+    void preprocessInput(const cv::Mat& imageIn);
     bool postprocessOutput(DetectionBox& detectionBoxOut);
     int tensorsToDetections(float* boxes, float* scores) const;
     void weightedNonMaxSuppression(float* boxes, float*scores, int num_boxes);

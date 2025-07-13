@@ -7,10 +7,9 @@
 
 // Helper function to draw rotated bounding box
 static void drawRotatedBox(cv::Mat& image, const pi::DetectionBox& box, const cv::Scalar& color, int thickness) {
-    constexpr double RAD2DEG = 180.0 / CV_PI;
-
+    // Convert rotation from radians to degrees
     cv::RotatedRect rotatedRectangle(cv::Point2f(box.center.x, box.center.y),
-                                    cv::Size(box.width, box.height), box.rotation * RAD2DEG);
+                                    cv::Size(box.width, box.height), box.rotation * pi::RAD2DEG);
 
     cv::Point2f vertices[4];
     rotatedRectangle.points(vertices);
