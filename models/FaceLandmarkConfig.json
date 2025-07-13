@@ -1,4 +1,0 @@
-{
-  "model_file": "models/face_landmark.tflite",
-  "min_score_thresh": 0.5
-}

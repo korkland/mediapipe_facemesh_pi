@@ -10,6 +10,9 @@ FaceDetection::FaceDetection(const FaceDetectionConfig& config)
     ASSERT(m_config.frame_width > 0 && m_config.frame_height > 0,
            "Invalid frame dimensions for FaceDetection.");
 
+    // Build SSD anchors based on the configuration
+    buildAnchors(m_config.anchor_config);
+
     // instead of computing 1 / (1+exp(-x)), we can use the sigmoid function directly
     m_config.min_score_threshold = sigmoid_inv(m_config.min_score_threshold);
 
@@ -52,9 +55,52 @@ FaceDetection::FaceDetection(const FaceDetectionConfig& config)
     std::copy(projection_matrix.begin(), projection_matrix.end(), m_projection_matrix.begin());
 
     // Initialize SSD anchors
-    ASSERT(m_config.ssd_anchors.size() == GetOutputTensorShape(1)->data[1],
+    ASSERT(m_anchors.size() == GetOutputTensorShape(1)->data[1],
            "SSD anchors size does not match the output tensor size.");
-    m_sorted_scores_indices.resize(m_config.ssd_anchors.size());
+    m_sorted_scores_indices.resize(m_anchors.size());
+}
+
+void FaceDetection::buildAnchors(const AnchorConfig& config)
+{
+    int anchor_size = 0;
+    for (const auto& stride: config.strides){
+        auto feature_map_size = static_cast<int>(std::ceil(config.input_size / stride));
+        anchor_size += (feature_map_size * feature_map_size * 2);
+    }
+    m_anchors.clear();
+    m_anchors.reserve(anchor_size);
+
+    int layer_id = 0;
+    const int strides_size = config.strides.size();
+    while (layer_id < strides_size){
+        int last_same_stride_layer = layer_id;
+        int aspect_ratio_size = 0;
+        // For same strides, we merge the anchors in the same order.
+        while (last_same_stride_layer < strides_size &&
+                config.strides[layer_id] == config.strides[last_same_stride_layer]){
+            aspect_ratio_size += 2;
+            last_same_stride_layer++;
+        }
+
+        const int stride = config.strides[layer_id];
+        auto feature_map_size = static_cast<int>(std::ceil(config.input_size / stride));
+
+        for (int y = 0; y < feature_map_size; ++y){
+            for (int x = 0; x < feature_map_size; ++x){
+                for (int anchor_id = 0; anchor_id < aspect_ratio_size; ++anchor_id){
+                    const float x_center = (x + config.anchor_offset) * 1.0f / feature_map_size;
+                    const float y_center = (y + config.anchor_offset) * 1.0f / feature_map_size;
+
+                    Point2D new_anchor;
+                    new_anchor.x = x_center;
+                    new_anchor.y = y_center;
+
+                    m_anchors.push_back(new_anchor);
+                }
+            }
+        }
+        layer_id = last_same_stride_layer;
+    }
 }
 
 bool FaceDetection::run(const cv::Mat& imageIn, DetectionBox& detectionBoxOut) {
@@ -105,13 +151,13 @@ int FaceDetection::tensorsToDetections(float* boxes, float* scores) const {
     const auto score_threshold = m_config.min_score_threshold;
 
     int num_boxes_passed = 0;
-    const int num_boxes = m_config.ssd_anchors.size();
+    const int num_boxes = m_anchors.size();
     for (int i = 0; i < num_boxes; ++i) {
         auto score = scores[i];
         if (score < score_threshold)
             continue; // Skip boxes with low scores
 
-        const auto anchor = m_config.ssd_anchors[i];
+        const auto anchor = m_anchors[i];
         const auto box_read = &boxes[i * FaceDetectionIdx::FACE_DETECTION_COUNT];
         const auto x_center = box_read[FaceDetectionIdx::X] * tensor_scale + anchor.x;
         const auto y_center = box_read[FaceDetectionIdx::Y] * tensor_scale + anchor.y;

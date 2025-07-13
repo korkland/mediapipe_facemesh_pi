@@ -1,0 +1,24 @@
+{
+  "face_detection": {
+    "model_path": "models/face_detection_short_range.tflite",
+    "min_score_threshold": 0.5,
+    "min_suppression_threshold": 0.3,
+    "anchor_config": {
+      "min_scale": 0.1484375,
+      "max_scale": 0.75,
+      "input_size": 128,
+      "anchor_offset": 0.5,
+      "strides": [8, 16, 16, 16]
+    }
+  },
+  "face_landmarks": {
+    "model_path": "models/face_landmarks.tflite",
+    "min_score_threshold": 0.5
+  },
+  "face_manager": {
+    "frame_width": 640,
+    "frame_height": 480,
+    "enable_landmarks": true,
+    "enable_performance_stats": true
+  }
+}

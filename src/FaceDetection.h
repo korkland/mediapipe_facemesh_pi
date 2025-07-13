@@ -2,17 +2,9 @@
 
 #include "TfLiteModel.h"
 #include "CommonDefines.h"
+#include "ConfigManager.h"
 
 namespace pi {
-
-struct FaceDetectionConfig {
-    std::string model_path;
-    int frame_width{ 0 };   // Width of the input frame
-    int frame_height{ 0 };  // Height of the input frame
-    float min_score_threshold{ 0.5f }; // Minimum score threshold for detection
-    float min_suppression_threshold{ 0.3f }; // Minimum suppression threshold for non-max suppression
-    std::vector<Point2D> ssd_anchors; // SSD anchors parameters
-};
 
 class FaceDetection : public TfLiteModel {
 public:
@@ -22,6 +14,7 @@ public:
 
 private:
 
+    void buildAnchors(const AnchorConfig& config);
     void preprocessInput(const cv::Mat& input);
     bool postprocessOutput(DetectionBox& detectionBoxOut);
     int tensorsToDetections(float* boxes, float* scores) const;
@@ -34,7 +27,7 @@ private:
     cv::Mat m_model_input_perspective_transform; // Perspective transform matrix for the model
     std::array<float, 6> m_projection_matrix;
     std::vector<int> m_sorted_scores_indices; // Sorted indices of scores for non-max suppression
+    std::vector<Point2D> m_anchors; // SSD anchors parameters
     FaceDetectionConfig m_config; // Configuration for face detection
-
 };
 } // namespace pi

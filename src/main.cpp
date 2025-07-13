@@ -1,64 +1,12 @@
 #include <opencv2/opencv.hpp>
+#include "ConfigManager.h"
 #include "FaceDetection.h"
 #include "CommonDefines.h"
 #include <json.hpp>
 #include <chrono>
 
-bool build_anchors(std::vector<pi::Point2D>& anchors)
-{
-    // TODO - Load anchor configuration from a file or JSON object
-    constexpr float min_scale = 0.1484375f; // anchor_config["min_scale"].asFloat();
-    constexpr float max_scale = 0.75f; // anchor_config["max_scale"].asFloat();
-    constexpr float input_size = 128.f; // anchor_config["input_size"].asFloat();
-    constexpr float anchor_offset_x = 0.5f; // anchor_config["anchor_offset_x"].asFloat();
-    constexpr float anchor_offset_y = 0.5f; // anchor_config["anchor_offset_y"].asFloat();
-    std::vector<int> strides = { 8, 16, 16, 16 }; // Example strides
-
-    int anchor_size = 0;
-    for (const auto& stride: strides){
-        auto feature_map_size = static_cast<int>(std::ceil(input_size / stride));
-        anchor_size += (feature_map_size * feature_map_size * 2);
-    }
-    anchors.clear();
-    anchors.reserve(anchor_size);
-
-    int layer_id = 0;
-    const int strides_size = strides.size();
-    while (layer_id < strides_size){
-        int last_same_stride_layer = layer_id;
-        int aspect_ratio_size = 0;
-        // For same strides, we merge the anchors in the same order.
-        while (last_same_stride_layer < strides_size && strides[layer_id] == strides[last_same_stride_layer]){
-            aspect_ratio_size += 2;
-            last_same_stride_layer++;
-        }
-
-        const int stride = strides[layer_id];
-        const int feature_map_height = std::ceil(input_size / stride);
-        const int feature_map_width = std::ceil(input_size / stride);
-
-        for (int y = 0; y < feature_map_height; ++y){
-            for (int x = 0; x < feature_map_width; ++x){
-                for (int anchor_id = 0; anchor_id < aspect_ratio_size; ++anchor_id){
-                    const float x_center = (x + anchor_offset_x) * 1.0F / feature_map_width;
-                    const float y_center = (y + anchor_offset_y) * 1.0F / feature_map_height;
-
-                    pi::Point2D new_anchor;
-                    new_anchor.x = x_center;
-                    new_anchor.y = y_center;
-
-                    anchors.push_back(new_anchor);
-                }
-            }
-        }
-        layer_id = last_same_stride_layer;
-    }
-
-    return true;
-}
-
 // Helper function to draw rotated bounding box
-void drawRotatedBox(cv::Mat& image, const pi::DetectionBox& box, const cv::Scalar& color, int thickness) {
+static void drawRotatedBox(cv::Mat& image, const pi::DetectionBox& box, const cv::Scalar& color, int thickness) {
     constexpr double RAD2DEG = 180.0 / CV_PI;
 
     cv::RotatedRect rotatedRectangle(cv::Point2f(box.center.x, box.center.y),
@@ -71,6 +19,10 @@ void drawRotatedBox(cv::Mat& image, const pi::DetectionBox& box, const cv::Scala
 }
 
 int main(int argc, char** argv) {
+
+    // Load Configuration
+    pi::FaceManagerConfig config;
+    pi::ConfigManager::loadFromFile(std::string(MODELS_DIR) + "/face_config.json", config);
 
     // Force V4L2 backend instead of GStreamer
     cv::VideoCapture cap(0, cv::CAP_V4L2);
@@ -87,8 +39,12 @@ int main(int argc, char** argv) {
     std::cout << "Default FPS: " << cap.get(cv::CAP_PROP_FPS) << std::endl;
 
     // Setting properties in the correct order
-    bool width_set = cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
-    bool height_set = cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+    bool width_set = cap.set(cv::CAP_PROP_FRAME_WIDTH, config.frame_width);
+    bool height_set = cap.set(cv::CAP_PROP_FRAME_HEIGHT, config.frame_height);
+    if (!width_set || !height_set) {
+        std::cerr << "Error: Could not set camera resolution to " << config.frame_width << "x" << config.frame_height << std::endl;
+        return -1;
+    }
     bool fps_set = cap.set(cv::CAP_PROP_FPS, 30);
     bool buffer_set = cap.set(cv::CAP_PROP_BUFFERSIZE, 1);
     bool fourcc_set = cap.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('Y', 'U', 'Y', 'V'));
@@ -109,15 +65,8 @@ int main(int argc, char** argv) {
     std::cout << "Actual resolution: " << frame_width << "x" << frame_height << std::endl;
     std::cout << "Actual FPS: " << fps << std::endl;
 
-    // Create a FaceDetectionConfig configuration
-    pi::FaceDetectionConfig config;
-    config.model_path = "models/face_detection_short_range.tflite";
-    config.frame_width = frame_width;
-    config.frame_height = frame_height;
-    build_anchors(config.ssd_anchors);
-
     // Create a FaceDetection instance
-    pi::FaceDetection faceDetection(config);
+    pi::FaceDetection faceDetection(config.detection_config);
 
     // Pre-allocate matrices to avoid reallocation
     cv::Mat frameBGR(frame_height, frame_width, CV_8UC3);

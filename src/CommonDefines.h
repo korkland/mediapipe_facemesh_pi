@@ -1,11 +1,11 @@
 #pragma once
 
-namespace pi {
-
 #define ASSERT(condition, message) \
     if (!(condition)) { \
         throw std::runtime_error("Assertion failed: " + std::string(message)); \
     }
+
+namespace pi {
 
 enum FaceDetectionIdx
 {
