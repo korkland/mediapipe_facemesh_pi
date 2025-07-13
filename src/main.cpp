@@ -6,75 +6,52 @@
 
 bool build_anchors(std::vector<pi::Point2D>& anchors)
 {
-    /* read anchor configuration*/
-    // RET_CHECK(cfg.isMember("ssd_anchors_params"), "Configuration file {} is corrupted or missing ssd_anchors_params data. ", cfgFile);
-    // const Json::Value& anchorCfg = cfg["ssd_anchors_params"];
-
-    // RET_CHECK(anchorCfg.isMember("min_scale"), "Configuration file {} is corrupted or missing min_scale data. ", cfgFile);
-    const float minScale = 0.1484375f; //anchorCfg["min_scale"].asFloat();
-
-    // RET_CHECK(anchorCfg.isMember("max_scale"), "Configuration file {} is corrupted or missing max_scale data. ", cfgFile);
-    const float maxScale = 0.75f; //anchorCfg["max_scale"].asFloat();
-
-    // RET_CHECK(anchorCfg.isMember("input_size"), "Configuration file {} is corrupted or missing input_size data. ", cfgFile);
-    const float inputSize = 128.f; //anchorCfg["input_size"].asFloat();
-
-    // RET_CHECK(anchorCfg.isMember("anchor_offset_x"), "Configuration file {} is corrupted or missing anchor_offset_x data. ", cfgFile);
-    const float anchorOffsetX = 0.5f; //anchorCfg["anchor_offset_x"].asFloat();
-
-    // RET_CHECK(anchorCfg.isMember("anchor_offset_y"), "Configuration file {} is corrupted or missing anchor_offset_y data. ", cfgFile);
-    const float anchorOffsetY = 0.5f; //anchorCfg["anchor_offset_y"].asFloat();
-
-    // RET_CHECK(anchorCfg.isMember("strides"), "Configuration file {} is corrupted or missing strides data. ", cfgFile);
-    // RET_CHECK((anchorCfg["strides"].size() > 1), "Configuration file {}. strides must be greater than 1!", cfgFile);
-    // std::vector<int> strides(anchorCfg["strides"].size());
-    // for (unsigned int i = 0; i < anchorCfg["strides"].size(); i++)
-    //     strides[i] = anchorCfg["strides"][i].asInt();
+    // TODO - Load anchor configuration from a file or JSON object
+    constexpr float min_scale = 0.1484375f; // anchor_config["min_scale"].asFloat();
+    constexpr float max_scale = 0.75f; // anchor_config["max_scale"].asFloat();
+    constexpr float input_size = 128.f; // anchor_config["input_size"].asFloat();
+    constexpr float anchor_offset_x = 0.5f; // anchor_config["anchor_offset_x"].asFloat();
+    constexpr float anchor_offset_y = 0.5f; // anchor_config["anchor_offset_y"].asFloat();
     std::vector<int> strides = { 8, 16, 16, 16 }; // Example strides
 
-    int anchorSize = 0;
-    for (int i = 0; i < strides.size(); i++)
-    {
-        const int featureMapSize = std::ceil(inputSize / strides[i]);
-        anchorSize += (featureMapSize * featureMapSize * 2);
+    int anchor_size = 0;
+    for (const auto& stride: strides){
+        auto feature_map_size = static_cast<int>(std::ceil(input_size / stride));
+        anchor_size += (feature_map_size * feature_map_size * 2);
     }
-    anchors.reserve(anchorSize);
+    anchors.clear();
+    anchors.reserve(anchor_size);
 
-    int layerId = 0;
-    const int stridesSize = strides.size();
-    while (layerId < stridesSize)
-    {
-        int lastSameStrideLayer = layerId;
-        int aspectRatioSize = 0;
+    int layer_id = 0;
+    const int strides_size = strides.size();
+    while (layer_id < strides_size){
+        int last_same_stride_layer = layer_id;
+        int aspect_ratio_size = 0;
         // For same strides, we merge the anchors in the same order.
-        while (lastSameStrideLayer < stridesSize && strides[layerId] == strides[lastSameStrideLayer])
-        {
-            aspectRatioSize += 2;
-            lastSameStrideLayer++;
+        while (last_same_stride_layer < strides_size && strides[layer_id] == strides[last_same_stride_layer]){
+            aspect_ratio_size += 2;
+            last_same_stride_layer++;
         }
 
-        const int stride = strides[layerId];
-        const int featureMapHeight = std::ceil(inputSize / stride);
-        const int featureMapWidth = std::ceil(inputSize / stride);
+        const int stride = strides[layer_id];
+        const int feature_map_height = std::ceil(input_size / stride);
+        const int feature_map_width = std::ceil(input_size / stride);
 
-        for (int y = 0; y < featureMapHeight; ++y)
-        {
-            for (int x = 0; x < featureMapWidth; ++x)
-            {
-                for (int anchorId = 0; anchorId < aspectRatioSize; ++anchorId)
-                {
-                    const float xCenter = (x + anchorOffsetX) * 1.0F / featureMapWidth;
-                    const float yCenter = (y + anchorOffsetY) * 1.0F / featureMapHeight;
+        for (int y = 0; y < feature_map_height; ++y){
+            for (int x = 0; x < feature_map_width; ++x){
+                for (int anchor_id = 0; anchor_id < aspect_ratio_size; ++anchor_id){
+                    const float x_center = (x + anchor_offset_x) * 1.0F / feature_map_width;
+                    const float y_center = (y + anchor_offset_y) * 1.0F / feature_map_height;
 
                     pi::Point2D new_anchor;
-                    new_anchor.x = xCenter;
-                    new_anchor.y = yCenter;
+                    new_anchor.x = x_center;
+                    new_anchor.y = y_center;
 
                     anchors.push_back(new_anchor);
                 }
             }
         }
-        layerId = lastSameStrideLayer;
+        layer_id = last_same_stride_layer;
     }
 
     return true;
@@ -106,6 +83,8 @@ int main(int argc, char** argv) {
     cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
     cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
     cap.set(cv::CAP_PROP_FPS, 30);
+    cap.set(cv::CAP_PROP_BUFFERSIZE, 1);  // Reduce buffer latency
+    cap.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G')); // Hardware MJPEG
 
     // Get actual frame dimensions
     int frame_width = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_WIDTH));
@@ -124,8 +103,9 @@ int main(int argc, char** argv) {
     // Create a FaceDetection instance
     pi::FaceDetection faceDetection(config);
 
-    cv::Mat frameBGR;
-    cv::Mat frameRGB;
+    // Pre-allocate matrices to avoid reallocation
+    cv::Mat frameBGR(frame_height, frame_width, CV_8UC3);
+    cv::Mat frameRGB(frame_height, frame_width, CV_8UC3);
     int frame_count = 0;
 
     // Performance tracking variables
