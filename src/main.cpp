@@ -1,21 +1,9 @@
 #include <opencv2/opencv.hpp>
 #include "ConfigManager.h"
-#include "FaceDetection.h"
+#include "FaceManager.h"
 #include "CommonDefines.h"
 #include <json.hpp>
 #include <chrono>
-
-// Helper function to draw rotated bounding box
-static void drawRotatedBox(cv::Mat& image, const pi::DetectionBox& box, const cv::Scalar& color, int thickness) {
-    // Convert rotation from radians to degrees
-    cv::RotatedRect rotatedRectangle(cv::Point2f(box.center.x, box.center.y),
-                                    cv::Size(box.width, box.height), box.rotation * pi::RAD2DEG);
-
-    cv::Point2f vertices[4];
-    rotatedRectangle.points(vertices);
-    for (int i = 0; i < 4; i++)
-        cv::line(image, vertices[i], vertices[(i + 1) % 4], color, thickness);
-}
 
 int main(int argc, char** argv) {
 
@@ -65,7 +53,7 @@ int main(int argc, char** argv) {
     std::cout << "Actual FPS: " << fps << std::endl;
 
     // Create a FaceDetection instance
-    pi::FaceDetection faceDetection(config.detection_config);
+    pi::FaceManager faceManager(config);
 
     // Pre-allocate matrices to avoid reallocation
     cv::Mat frameBGR(frame_height, frame_width, CV_8UC3);
@@ -83,7 +71,7 @@ int main(int argc, char** argv) {
     std::cout << "Press 'q' to quit, 's' to save current frame" << std::endl;
     std::cout << "Frame | Total(ms) | Detection(ms) | Drawing(ms) | FPS" << std::endl;
     std::cout << "------|-----------|---------------|-------------|----" << std::endl;
-
+    pi::DetectionBox detectionBox;
     while (true) {
         // Read frame from camera
         if (!cap.read(frameBGR)) {
@@ -106,8 +94,7 @@ int main(int argc, char** argv) {
         auto detection_start = std::chrono::high_resolution_clock::now();
 
         // Run face detection
-        pi::DetectionBox detectionBox;
-        bool face_detected = faceDetection.run(frameRGB, detectionBox);
+        bool face_status = faceManager.run(frameRGB, detectionBox);
 
         // TOCK - End detection timer
         auto detection_end = std::chrono::high_resolution_clock::now();
@@ -116,9 +103,9 @@ int main(int argc, char** argv) {
         // TICK - Start drawing timer
         auto drawing_start = std::chrono::high_resolution_clock::now();
 
-        if (face_detected) {
+        if (face_status) {
             // Draw rotated detection box
-            drawRotatedBox(frameBGR, detectionBox, cv::Scalar(0, 255, 0), 2);
+            faceManager.drawBoxAndLandmarks(frameBGR, detectionBox, faceManager.getLandmarks());
         } else {
             cv::putText(frameBGR, "No Face Detected", cv::Point(10, 30),
                        cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 2);

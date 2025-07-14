@@ -82,4 +82,46 @@ bool FaceLandmarks::postprocessOutput(DetectionBox& detectionBoxInOut) {
 
     return true; // Inference successful
 }
+
+void FaceLandmarks::tensorsToLandmarks(DetectionBox& detectionBoxInOut) {
+    // Extract and scale landmarks from the output tensor
+    const auto raw_landmarks = reinterpret_cast<Point3D*>(GetOutputTensorData(0));
+    const auto sin_angle = std::sin(detectionBoxInOut.rotation);
+    const auto cos_angle = std::cos(detectionBoxInOut.rotation);
+    const auto z_scale = detectionBoxInOut.width * m_tensor_scale;
+    for (size_t i = 0; i < m_landmarks.size(); ++i) {
+        const auto x = raw_landmarks[i].x * m_tensor_scale - 0.5f;
+        const auto y = raw_landmarks[i].y * m_tensor_scale - 0.5f;
+
+        Point3D landmark;
+        landmark.x = (x * cos_angle - y * sin_angle) * detectionBoxInOut.width + detectionBoxInOut.center.x;
+        landmark.y = (x * sin_angle + y * cos_angle) * detectionBoxInOut.height + detectionBoxInOut.center.y;
+        landmark.z = raw_landmarks[i].z * z_scale; // Scale Z coordinate
+        m_landmarks[i] = landmark;
+    }
+}
+
+void FaceLandmarks::landmarksToDetection(DetectionBox& detectionBoxInOut) {
+    constexpr float box_scale_size = 1.5f;
+
+    // Extract detection box based on landmarks
+    auto [x_min_it, x_max_it] = std::minmax_element(m_landmarks.begin(), m_landmarks.end(),
+        [](const Point3D& a, const Point3D& b) { return a.x < b.x; });
+    auto [y_min_it, y_max_it] = std::minmax_element(m_landmarks.begin(), m_landmarks.end(),
+        [](const Point3D& a, const Point3D& b) { return a.y < b.y; });
+
+    // Calculate the center and size of the detection box
+    const auto width = x_max_it->x - x_min_it->x;
+    const auto height = y_max_it->y - y_min_it->y;
+    const auto longest_dim = std::max(width, height) * box_scale_size;
+
+    detectionBoxInOut.center.x = x_min_it->x + width * 0.5f;
+    detectionBoxInOut.center.y = y_min_it->y + height * 0.5f;
+    detectionBoxInOut.width = longest_dim;
+    detectionBoxInOut.height = longest_dim;
+    detectionBoxInOut.rotation = calc_rotation(
+        m_landmarks[m_config.right_eye_index_for_rotation].x, m_landmarks[m_config.right_eye_index_for_rotation].y,
+        m_landmarks[m_config.left_eye_index_for_rotation].x, m_landmarks[m_config.left_eye_index_for_rotation].y);
+}
+
 } // namespace pi

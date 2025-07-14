@@ -52,6 +52,7 @@ add_executable(mediapipe_facemesh_pi
                 src/FaceDetection.cpp
                 src/ConfigManager.cpp
                 src/FaceLandmarks.cpp
+                src/FaceManager.cpp
                 )
 
 # Include Json header

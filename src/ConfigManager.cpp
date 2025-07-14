@@ -76,5 +76,13 @@ void ConfigManager::parseLandmarksConfig(const nlohmann::json& json, FaceLandmar
 
     config.model_path = json["model_path"].get<std::string>();
     config.min_score_threshold = json["min_score_threshold"].get<float>();
+
+    if (json.contains("right_eye_index_for_rotation")) {
+        config.right_eye_index_for_rotation = json["right_eye_index_for_rotation"].get<int>();
+    }
+    if (json.contains("left_eye_index_for_rotation")) {
+        config.left_eye_index_for_rotation = json["left_eye_index_for_rotation"].get<int>();
+    }
+
 }
 } // namespace pi

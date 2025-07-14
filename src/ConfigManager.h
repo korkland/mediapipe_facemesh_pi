@@ -29,6 +29,8 @@ struct FaceLandmarksConfig {
     int frame_width{ 0 };   // Width of the input frame
     int frame_height{ 0 };  // Height of the input frame
     float min_score_threshold{ 0.5f }; // Minimum score threshold for landmarks detection
+    int right_eye_index_for_rotation{ 33 }; // Index of the right eye landmark for rotation calculation
+    int left_eye_index_for_rotation{ 263 }; // Index of the left eye landmark for rotation calculation
 };
 
 struct FaceManagerConfig {
