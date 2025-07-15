@@ -17,18 +17,18 @@ Full implementation of MediaPipe FaceMesh in C++ using TensorFlow Lite (TFLite) 
 
 ## Setup
 
-### 1. Run the Setup Script
+### 1. Clone the Repository
+```
+git clone https://github.com/korkland/mediapipe_facemesh_pi.git
+cd mediapipe_facemesh_pi
+```
+
+### 2. Run the Setup Script
 ```
 bash setup.sh
 ```
 
 This script will install all required dependencies, including OpenCV and TensorFlow Lite (if configured). Review and edit `setup.sh` as needed for your environment.
-
-### 2. Clone the Repository
-```
-git clone https://github.com/yourusername/mediapipe_facemesh_pi.git
-cd mediapipe_facemesh_pi
-```
 
 ### 3. Build the Project
 ```
@@ -40,19 +40,20 @@ make -j4
 
 ### 4. Run the Demo
 ```
-./facemesh_demo
+./mediapipe_facemesh_pi
 ```
 
 ## Usage
 - The demo will open the default camera and display face mesh landmarks in real time.
 - Press `q` to quit.
+- Press `s` to save current frame
 
 ## Project Structure
 - `CMakeLists.txt` - Build configuration
 - `cmake/` - CMake modules (e.g., FindTFLite.cmake)
 - `build/` - Build output
 - `setup.sh` - Optional setup script
-- `src/` - Source code (add your implementation here)
+- `src/` - Source code
 
 ## References
 - [MediaPipe FaceMesh](https://google.github.io/mediapipe/solutions/face_mesh.html)
