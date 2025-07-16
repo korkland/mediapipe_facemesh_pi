@@ -1,12 +1,12 @@
-#include "ConfigManager.h"
-#include "CommonDefines.h"
+#include "config_manager.h"
+#include "common_defines.h"
 #include <fstream>
 #include <filesystem>
 #include <json.hpp>
 
 namespace pi {
 
-void ConfigManager::loadFromFile(const std::string& config_path, FaceManagerConfig& config) {
+void ConfigManager::LoadFromFile(const std::string& config_path, FaceManagerConfig& config) {
     ASSERT(std::filesystem::exists(config_path), "Configuration file does not exist: " + config_path);
     ASSERT(std::filesystem::is_regular_file(config_path), "Configuration path is not a file: " + config_path);
     std::ifstream file(config_path);
@@ -17,11 +17,11 @@ void ConfigManager::loadFromFile(const std::string& config_path, FaceManagerConf
 
     // Parse detection config
     ASSERT(json.contains("face_detection"), "Missing 'face_detection' section in configuration file.");
-    parseDetectionConfig(json["face_detection"], config.detection_config);
+    ParseDetectionConfig(json["face_detection"], config.detection_config);
 
     // Parse landmarks config
     ASSERT(json.contains("face_landmarks"), "Missing 'face_landmarks' section in configuration file.");
-    parseLandmarksConfig(json["face_landmarks"], config.landmarks_config);
+    ParseLandmarksConfig(json["face_landmarks"], config.landmarks_config);
 
     // Parse manager config
     ASSERT(json.contains("face_manager"), "Missing 'face_manager' section in configuration file.");
@@ -43,7 +43,7 @@ void ConfigManager::loadFromFile(const std::string& config_path, FaceManagerConf
     }
 }
 
-void ConfigManager::parseAnchorConfig(const nlohmann::json& json, AnchorConfig& config) {
+void ConfigManager::ParseAnchorConfig(const nlohmann::json& json, AnchorConfig& config) {
     ASSERT(json.contains("min_scale"), "Missing 'min_scale' in anchor configuration.");
     ASSERT(json.contains("max_scale"), "Missing 'max_scale' in anchor configuration.");
     ASSERT(json.contains("input_size"), "Missing 'input_size' in anchor configuration.");
@@ -57,7 +57,7 @@ void ConfigManager::parseAnchorConfig(const nlohmann::json& json, AnchorConfig& 
     config.strides = json["strides"].get<std::vector<int>>();
 }
 
-void ConfigManager::parseDetectionConfig(const nlohmann::json& json, FaceDetectionConfig& config) {
+void ConfigManager::ParseDetectionConfig(const nlohmann::json& json, FaceDetectionConfig& config) {
     ASSERT(json.contains("model_path"), "Missing 'model_path' in face detection configuration.");
     ASSERT(json.contains("min_score_threshold"), "Missing 'min_score_threshold' in face detection configuration.");
     ASSERT(json.contains("min_suppression_threshold"), "Missing 'min_suppression_threshold' in face detection configuration.");
@@ -67,10 +67,10 @@ void ConfigManager::parseDetectionConfig(const nlohmann::json& json, FaceDetecti
     config.min_score_threshold = json["min_score_threshold"].get<float>();
     config.min_suppression_threshold = json["min_suppression_threshold"].get<float>();
 
-    parseAnchorConfig(json["anchor_config"], config.anchor_config);
+    ParseAnchorConfig(json["anchor_config"], config.anchor_config);
 }
 
-void ConfigManager::parseLandmarksConfig(const nlohmann::json& json, FaceLandmarksConfig& config) {
+void ConfigManager::ParseLandmarksConfig(const nlohmann::json& json, FaceLandmarksConfig& config) {
     ASSERT(json.contains("model_path"), "Missing 'model_path' in face landmarks configuration.");
     ASSERT(json.contains("min_score_threshold"), "Missing 'min_score_threshold' in face landmarks configuration.");
 

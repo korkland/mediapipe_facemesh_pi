@@ -48,11 +48,11 @@ set(MODELS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/models)
 # --- Application ---
 add_executable(mediapipe_facemesh_pi
                 src/main.cpp
-                src/TfLiteModel.cpp
-                src/FaceDetection.cpp
-                src/ConfigManager.cpp
-                src/FaceLandmarks.cpp
-                src/FaceManager.cpp
+                src/tflite_model.cpp
+                src/face_detection.cpp
+                src/config_manager.cpp
+                src/face_landmarks.cpp
+                src/face_manager.cpp
                 )
 
 # Include Json header

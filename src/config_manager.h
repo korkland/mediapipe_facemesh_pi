@@ -3,7 +3,7 @@
 #include <json.hpp>
 #include <string>
 #include <vector>
-#include "CommonDefines.h"
+#include "common_defines.h"
 
 namespace pi {
 
@@ -44,12 +44,12 @@ struct FaceManagerConfig {
 
 class ConfigManager {
 public:
-    static void loadFromFile(const std::string& config_path, FaceManagerConfig& config);
+    static void LoadFromFile(const std::string& config_path, FaceManagerConfig& config);
 
 private:
-    static void parseAnchorConfig(const nlohmann::json& json, AnchorConfig& config);
-    static void parseDetectionConfig(const nlohmann::json& json, FaceDetectionConfig& config);
-    static void parseLandmarksConfig(const nlohmann::json& json, FaceLandmarksConfig& config);
+    static void ParseAnchorConfig(const nlohmann::json& json, AnchorConfig& config);
+    static void ParseDetectionConfig(const nlohmann::json& json, FaceDetectionConfig& config);
+    static void ParseLandmarksConfig(const nlohmann::json& json, FaceLandmarksConfig& config);
 };
 
 } // namespace pi

@@ -58,13 +58,13 @@ struct DetectionBox{
 };
 
 // Utility functions
-inline Point2D projectPoint(const Point2D& point, const std::array<float, 6>& transform) {
+inline Point2D ProjectPoint(const Point2D& point, const std::array<float, 6>& transform) {
     return { point.x * transform[0] + point.y * transform[1] + transform[2],
              point.x * transform[3] + point.y * transform[4] + transform[5] };
 }
-inline float sigmoid(float x) { return 1.0f / (1.0f + std::exp(-x)); }
-inline float sigmoid_inv(float x) { return -1.0f * std::log(1.0f / x - 1.0f); }
-inline float overlap_similarity(const float* box1, const float* box2) {
+inline float Sigmoid(float x) { return 1.0f / (1.0f + std::exp(-x)); }
+inline float SigmoidInv(float x) { return -1.0f * std::log(1.0f / x - 1.0f); }
+inline float OverlapSimilarity(const float* box1, const float* box2) {
     // Calculate the intersection area
     float x1 = std::max(box1[FaceDetectionIdx::X], box2[FaceDetectionIdx::X]);
     float y1 = std::max(box1[FaceDetectionIdx::Y], box2[FaceDetectionIdx::Y]);
@@ -81,16 +81,16 @@ inline float overlap_similarity(const float* box1, const float* box2) {
 
     return intersection_area / union_area;
 }
-inline float normalize_radians(float angle) {
+inline float NormalizeRadians(float angle) {
     // Normalize the angle to the range [-pi, pi]
     constexpr double two_pi = 2.0 * M_PI;
     constexpr double two_pi_inv = 1.0 / two_pi;
     return angle - std::floor((angle + M_PI) * two_pi_inv) * two_pi;
 }
-inline float calc_rotation(float x0, float y0, float x1, float y1, float target_angle = 0.0f) {
+inline float CalcRotation(float x0, float y0, float x1, float y1, float target_angle = 0.0f) {
     // Calculate the angle in radians and convert to degrees
     float angle = target_angle - std::atan2(y0 - y1, x1 - x0);
-    return normalize_radians(angle);
+    return NormalizeRadians(angle);
 }
 
 } // namespace pi

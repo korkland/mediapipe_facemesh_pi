@@ -1,7 +1,7 @@
 #include <opencv2/opencv.hpp>
-#include "ConfigManager.h"
-#include "FaceManager.h"
-#include "CommonDefines.h"
+#include "config_manager.h"
+#include "face_manager.h"
+#include "common_defines.h"
 #include <json.hpp>
 #include <chrono>
 
@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
 
     // Load Configuration
     pi::FaceManagerConfig config;
-    pi::ConfigManager::loadFromFile(std::string(MODELS_DIR) + "/face_config.json", config);
+    pi::ConfigManager::LoadFromFile(std::string(MODELS_DIR) + "/face_config.json", config);
 
     // Force V4L2 backend instead of GStreamer
     cv::VideoCapture cap(0, cv::CAP_V4L2);
@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
         return -1;
     }
     bool fps_set = cap.set(cv::CAP_PROP_FPS, 30);
-    bool buffer_set = cap.set(cv::CAP_PROP_BUFFERSIZE, 1);
+    bool buffer_set = cap.set(cv::CAP_PROP_BUFFERSIZE, 3);
     bool fourcc_set = cap.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('Y', 'U', 'Y', 'V'));
 
     std::cout << "=== Property Setting Results ===" << std::endl;
@@ -53,11 +53,11 @@ int main(int argc, char** argv) {
     std::cout << "Actual FPS: " << fps << std::endl;
 
     // Create a FaceDetection instance
-    pi::FaceManager faceManager(config);
+    pi::FaceManager face_manager(config);
 
     // Pre-allocate matrices to avoid reallocation
-    cv::Mat frameBGR(frame_height, frame_width, CV_8UC3);
-    cv::Mat frameRGB(frame_height, frame_width, CV_8UC3);
+    cv::Mat frame_bgr(frame_height, frame_width, CV_8UC3);
+    cv::Mat frame_rgb(frame_height, frame_width, CV_8UC3);
     int frame_count = 0;
 
     // Performance tracking variables
@@ -71,15 +71,15 @@ int main(int argc, char** argv) {
     std::cout << "Press 'q' to quit, 's' to save current frame" << std::endl;
     std::cout << "Frame | Total(ms) | Detection(ms) | Drawing(ms) | FPS" << std::endl;
     std::cout << "------|-----------|---------------|-------------|----" << std::endl;
-    pi::DetectionBox detectionBox;
+    pi::DetectionBox detection_box;
     while (true) {
         // Read frame from camera
-        if (!cap.read(frameBGR)) {
+        if (!cap.read(frame_bgr)) {
             std::cerr << "Error: Could not read frame from camera." << std::endl;
             break;
         }
 
-        if (frameBGR.empty()) {
+        if (frame_bgr.empty()) {
             std::cerr << "Error: Empty frame received from camera." << std::endl;
             continue;
         }
@@ -88,13 +88,13 @@ int main(int argc, char** argv) {
         auto frame_start = std::chrono::high_resolution_clock::now();
 
         // Convert frame to RGB
-        cv::cvtColor(frameBGR, frameRGB, cv::COLOR_BGR2RGB);
+        cv::cvtColor(frame_bgr, frame_rgb, cv::COLOR_BGR2RGB);
 
         // TICK - Start detection timer
         auto detection_start = std::chrono::high_resolution_clock::now();
 
         // Run face detection
-        bool face_status = faceManager.run(frameRGB, detectionBox);
+        bool face_status = face_manager.Run(frame_rgb, detection_box);
 
         // TOCK - End detection timer
         auto detection_end = std::chrono::high_resolution_clock::now();
@@ -105,9 +105,9 @@ int main(int argc, char** argv) {
 
         if (face_status) {
             // Draw rotated detection box
-            faceManager.drawBoxAndLandmarks(frameBGR, detectionBox, faceManager.getLandmarks());
+            face_manager.draw_box_and_landmarks(frame_bgr, detection_box, face_manager.GetLandmarks());
         } else {
-            cv::putText(frameBGR, "No Face Detected", cv::Point(10, 30),
+            cv::putText(frame_bgr, "No Face Detected", cv::Point(10, 30),
                        cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 2);
         }
 
@@ -140,11 +140,11 @@ int main(int argc, char** argv) {
                   << "Frame: " << frame_time_ms << "ms | "
                   << "Detection: " << detection_time_ms << "ms | "
                   << "FPS: " << current_fps;
-        cv::putText(frameBGR, perf_text.str(), cv::Point(10, frame_height - 20),
+        cv::putText(frame_bgr, perf_text.str(), cv::Point(10, frame_height - 20),
                    cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255, 255, 255), 1);
 
         // Display the frame
-        cv::imshow("Face Detection", frameBGR);
+        cv::imshow("Face Detection", frame_bgr);
 
         frame_count++;
 
@@ -154,7 +154,7 @@ int main(int argc, char** argv) {
             break;
         } else if (key == 's') { // 's' key to save current frame
             std::string filename = "face_detection_frame_" + std::to_string(frame_count) + ".jpg";
-            cv::imwrite(filename, frameBGR);
+            cv::imwrite(filename, frame_bgr);
             std::cout << "Frame saved as: " << filename << std::endl;
         }
 

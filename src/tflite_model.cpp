@@ -1,5 +1,5 @@
-#include "TfLiteModel.h"
-#include "CommonDefines.h"
+#include "tflite_model.h"
+#include "common_defines.h"
 #include "tensorflow/lite/kernels/register.h"
 
 namespace pi {
@@ -7,26 +7,26 @@ namespace pi {
 TfLiteModel::TfLiteModel(const std::string& model_path) {
 
     // Load the TFLite model from the specified path
-    m_model = tflite::FlatBufferModel::BuildFromFile(model_path.c_str());
-    ASSERT(m_model != nullptr, "Failed to load model from " + model_path);
+    model_ = tflite::FlatBufferModel::BuildFromFile(model_path.c_str());
+    ASSERT(model_ != nullptr, "Failed to load model from " + model_path);
 
     // Create the interpreter with the model
     tflite::ops::builtin::BuiltinOpResolver resolver;
-    tflite::InterpreterBuilder builder(*m_model, resolver);
-    ASSERT(builder(&m_interpreter) == kTfLiteOk && m_interpreter != nullptr,
+    tflite::InterpreterBuilder builder(*model_, resolver);
+    ASSERT(builder(&interpreter_) == kTfLiteOk && interpreter_ != nullptr,
            "Failed to create interpreter for model " + model_path);
 
     // Initialize the XNNPack delegate
     TfLiteXNNPackDelegateOptions xnnpack_options = TfLiteXNNPackDelegateOptionsDefault();
-    m_xnnpack_delegate = TfLiteXNNPackDelegateCreate(&xnnpack_options);
-    ASSERT(m_xnnpack_delegate != nullptr, "Failed to create XNNPack delegate for model " + model_path);
+    xnnpack_delegate_ = TfLiteXNNPackDelegateCreate(&xnnpack_options);
+    ASSERT(xnnpack_delegate_ != nullptr, "Failed to create XNNPack delegate for model " + model_path);
 
     // Modify the interpreter to use the XNNPack delegate
-    ASSERT(m_interpreter->ModifyGraphWithDelegate(m_xnnpack_delegate) == kTfLiteOk,
+    ASSERT(interpreter_->ModifyGraphWithDelegate(xnnpack_delegate_) == kTfLiteOk,
            "Failed to modify graph with XNNPack delegate for model " + model_path);
 
     // Allocate tensors for the interpreter
-    ASSERT(m_interpreter->AllocateTensors() == kTfLiteOk,
+    ASSERT(interpreter_->AllocateTensors() == kTfLiteOk,
            "Failed to allocate tensors for model " + model_path);
 
     std::cout << "TFLite model loaded successfully from " << model_path << std::endl;
@@ -34,8 +34,8 @@ TfLiteModel::TfLiteModel(const std::string& model_path) {
 
 TfLiteModel::~TfLiteModel() {
     // Clean up the XNNPack delegate
-    if (m_xnnpack_delegate) {
-        TfLiteXNNPackDelegateDelete(m_xnnpack_delegate);
+    if (xnnpack_delegate_) {
+        TfLiteXNNPackDelegateDelete(xnnpack_delegate_);
     }
 }
 
